@@ -1,81 +1,76 @@
 import os
-from datetime import datetime
+from openai import OpenAI
 
 BOT_NAME = "OFENTSE AI CORE"
-VERSION = "1.0.0"
 
 SYSTEM_PROMPT = """
 You are OFENTSE AI CORE, a programming and technology assistant.
 
 Your specialties include:
-- Python and C# programming
-- Git and GitHub
-- Linux and Termux
-- Debugging and software development
-- Automation and cybersecurity education
+- Python, C#, JavaScript, HTML, and CSS
+- Linux, Termux, Git, and GitHub
+- Debugging and explaining code
+- Software development and automation
+- Cybersecurity education and authorized testing
 
-Explain concepts clearly, especially to beginners.
-When providing code, explain how to run and test it.
-Be honest about limitations and untested code.
+Explain concepts clearly to beginners.
+Provide useful code examples when appropriate.
+Be honest about your limitations.
 """
 
-def show_banner():
-    print("=" * 48)
-    print(f"  {BOT_NAME} v{VERSION}")
-    print("  PROGRAMMING & TECHNOLOGY ASSISTANT")
-    print("=" * 48)
-    print("Commands: help, time, clear, exit")
-    print("AI connection: not configured yet")
-    print()
-
-def show_help():
-    print("""
-Available commands:
-  help   - Show available commands
-  time   - Display the current time
-  clear  - Clear the terminal
-  exit   - Close the assistant
-
-Ask programming and technology questions normally.
-""")
-
 def main():
-    show_banner()
+    api_key = os.environ.get("OPENAI_API_KEY")
+
+    if not api_key:
+        print("API key not configured.")
+        print("Set the OPENAI_API_KEY environment variable.")
+        return
+
+    client = OpenAI(api_key=api_key)
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+
+    print(f"\n{BOT_NAME}")
+    print("Programming and Technology Assistant")
+    print("Type 'exit' to quit.\n")
 
     while True:
         try:
-            message = input("You > ").strip()
+            user_input = input("You > ").strip()
 
-            if not message:
-                continue
-
-            command = message.lower()
-
-            if command in ("exit", "quit"):
-                print(f"{BOT_NAME}: Goodbye!")
+            if user_input.lower() in ("exit", "quit"):
+                print("Goodbye!")
                 break
 
-            elif command == "help":
-                show_help()
+            if not user_input:
+                continue
 
-            elif command == "time":
-                print(datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+            messages.append({
+                "role": "user",
+                "content": user_input
+            })
 
-            elif command == "clear":
-                os.system("clear")
+            response = client.responses.create(
+                model="gpt-4.1-mini",
+                input=messages
+            )
 
-            else:
-                print(
-                    f"\n{BOT_NAME}: You asked: {message}"
-                )
-                print(
-                    "The online AI engine will be connected "
-                    "in the next development step.\n"
-                )
+            answer = response.output_text
+            print(f"\n{BOT_NAME} > {answer}\n")
 
-        except (KeyboardInterrupt, EOFError):
-            print(f"\n{BOT_NAME}: Session ended.")
+            messages.append({
+                "role": "assistant",
+                "content": answer
+            })
+
+            # Keep recent conversation context manageable.
+            if len(messages) > 21:
+                messages = [messages[0]] + messages[-20:]
+
+        except KeyboardInterrupt:
+            print("\nGoodbye!")
             break
+        except Exception as error:
+            print(f"Request failed: {error}")
 
 if __name__ == "__main__":
     main()
