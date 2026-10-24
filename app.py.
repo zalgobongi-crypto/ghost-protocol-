@@ -1,1 +1,74 @@
+import os
+import streamlit as st
+from openai import OpenAI
 
+st.set_page_config(
+    page_title="OFENTSE AI CORE",
+    page_icon="🤖",
+    layout="centered"
+)
+
+SYSTEM_PROMPT = """
+You are OFENTSE AI CORE, an assistant specializing in:
+- Python, C#, JavaScript, HTML, and CSS
+- Linux, Termux, Git, and GitHub
+- Debugging and software development
+- Automation and cybersecurity education
+
+Explain technical topics clearly to beginners.
+Provide code examples when useful.
+Be honest about limitations.
+"""
+
+st.title("🤖 OFENTSE AI CORE")
+st.caption("Programming • Technology • AI")
+
+api_key = os.environ.get("OPENAI_API_KEY")
+
+if not api_key:
+    st.error("The AI service is not configured yet.")
+    st.info("The site owner must configure OPENAI_API_KEY in the hosting secrets.")
+    st.stop()
+
+client = OpenAI(api_key=api_key)
+
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+for message in st.session_state.messages:
+    with st.chat_message(message["role"]):
+        st.markdown(message["content"])
+
+if prompt := st.chat_input("Ask me about programming or technology..."):
+    st.session_state.messages.append({
+        "role": "user",
+        "content": prompt
+    })
+
+    with st.chat_message("user"):
+        st.markdown(prompt)
+
+    history = [
+        {"role": "system", "content": SYSTEM_PROMPT}
+    ] + st.session_state.messages[-20:]
+
+    with st.chat_message("assistant"):
+        with st.spinner("Thinking..."):
+            try:
+                response = client.responses.create(
+                    model="gpt-4.1-mini",
+                    input=history
+                )
+                answer = response.output_text
+                st.markdown(answer)
+
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "content": answer
+                })
+
+            except Exception:
+                st.error(
+                    "The AI request failed. Check the API configuration, "
+                    "account access, and available API credits."
+                )
